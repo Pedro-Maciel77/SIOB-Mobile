@@ -1,0 +1,17 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AuditLogRepository = exports.MunicipalityRepository = exports.VehicleRepository = exports.ReportRepository = exports.OccurrenceRepository = exports.UserRepository = exports.BaseRepository = void 0;
+var BaseRepository_1 = require("./BaseRepository");
+Object.defineProperty(exports, "BaseRepository", { enumerable: true, get: function () { return BaseRepository_1.BaseRepository; } });
+var UserRepository_1 = require("./UserRepository");
+Object.defineProperty(exports, "UserRepository", { enumerable: true, get: function () { return UserRepository_1.UserRepository; } });
+var OccurrenceRepository_1 = require("./OccurrenceRepository");
+Object.defineProperty(exports, "OccurrenceRepository", { enumerable: true, get: function () { return OccurrenceRepository_1.OccurrenceRepository; } });
+var ReportRepository_1 = require("./ReportRepository");
+Object.defineProperty(exports, "ReportRepository", { enumerable: true, get: function () { return ReportRepository_1.ReportRepository; } });
+var VehicleRepository_1 = require("./VehicleRepository");
+Object.defineProperty(exports, "VehicleRepository", { enumerable: true, get: function () { return VehicleRepository_1.VehicleRepository; } });
+var MunicipalityRepository_1 = require("./MunicipalityRepository");
+Object.defineProperty(exports, "MunicipalityRepository", { enumerable: true, get: function () { return MunicipalityRepository_1.MunicipalityRepository; } });
+var AuditLogRepository_1 = require("./AuditLogRepository");
+Object.defineProperty(exports, "AuditLogRepository", { enumerable: true, get: function () { return AuditLogRepository_1.AuditLogRepository; } });
