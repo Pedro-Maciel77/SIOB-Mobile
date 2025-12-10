@@ -49,10 +49,10 @@ export class User {
   @OneToMany(() => AuditLog, auditLog => auditLog.user)
   auditLogs!: AuditLog[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 
   @BeforeInsert()

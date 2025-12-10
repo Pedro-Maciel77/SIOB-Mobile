@@ -1,9 +1,10 @@
 import { 
-  Entity, 
-  PrimaryGeneratedColumn, 
-  Column, 
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
   CreateDateColumn,
-  ManyToOne
+  ManyToOne,
+  JoinColumn
 } from 'typeorm';
 import { User } from './User';
 
@@ -13,6 +14,7 @@ export class AuditLog {
   id!: string;
 
   @ManyToOne(() => User, user => user.auditLogs)
+  @JoinColumn({ name: 'user_id' }) // ✅ AQUI
   user!: User;
 
   @Column()
@@ -21,15 +23,12 @@ export class AuditLog {
   @Column()
   entity!: 'user' | 'occurrence' | 'report' | 'vehicle';
 
-  @Column({ nullable: true })
+  @Column({ name: 'entity_id', nullable: true })
   entityId?: string;
 
   @Column({ type: 'jsonb', nullable: true })
   details?: Record<string, any>;
 
-  @Column({ type: 'jsonb', nullable: true })
-  changes?: Record<string, any>;
-
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 }

@@ -3,9 +3,6 @@ import { UserRepository } from '../../repositories/UserRepository';
 import { PasswordService } from './PasswordService';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository';
 
-const userId = 123;
-const secret = 'seuSegredoAqui';
-const expiresIn = '7d'
 
 export class AuthService {
     private userRepository = new UserRepository();
@@ -116,9 +113,8 @@ export class AuthService {
     }
 
     private generateAccessToken(userId: string): string {
-        const UserId = userId;
-        const secret = process.env.JWT_SECRET || 'seuSegredoAqui';
-        const expiresIn = '7d';
+       const secret = process.env.JWT_SECRET || 'secret';
+        const expiresIn = '1h';
 
         return jwt.sign(
             { userId },      // payload

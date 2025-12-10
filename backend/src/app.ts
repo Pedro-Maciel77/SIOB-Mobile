@@ -19,6 +19,8 @@ import { handleUploadError } from './middlewares/upload.middleware';
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 // Configurações de segurança
 app.use(helmet());
 app.use(cors({

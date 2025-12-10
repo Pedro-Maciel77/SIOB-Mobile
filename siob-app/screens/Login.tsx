@@ -10,27 +10,63 @@ import {
 } from 'react-native';
 import { Text, TextInput, Button } from 'react-native-paper';
 import { darkTheme } from '../theme/darkTheme'; // ajuste o path se necessário
+import api from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Login({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleEntrar = async () => {
-    setLoading(true);
-    // aqui você faria autenticação real (API)
-    setTimeout(() => {
-      setLoading(false);
-      // navegar para a tela principal (ajuste o nome da rota)
-      navigation.replace('Relatorios');
-    }, 900);
-  };
-
   const handleEsqueciSenha = () => {
-    // navegar para tela de recuperação de senha ou abrir modal
-    navigation.navigate('RecuperarSenha');
-  };
+  navigation.navigate('RecuperarSenha');
+};
 
+const handleEntrar = async () => {
+  try {
+    setLoading(true);
+
+    const response = await api.post('/auth/login', {
+      email,
+      password: senha,
+    });
+
+    // Estrutura correta baseada no log:
+    // response.data = { success: true, data: { tokens: { accessToken: "...", expiresIn: 3600 }, user: {...} } }
+    
+    const { data } = response.data; // data contém { tokens: {...}, user: {...} }
+    const { tokens, user } = data; // tokens contém { accessToken: "...", expiresIn: 3600 }
+    
+    // ✅ O token está em tokens.accessToken
+    const token = tokens.accessToken;
+
+    console.log('Token extraído:', token ? 'SIM' : 'NÃO');
+    console.log('User:', user);
+
+    if (!token) {
+      throw new Error('Token não encontrado na resposta');
+    }
+
+    if (!user) {
+      throw new Error('Usuário não encontrado na resposta');
+    }
+
+    // ✅ Agora salva corretamente
+    await AsyncStorage.setItem('@SIOB:token', token);
+    await AsyncStorage.setItem('@SIOB:user', JSON.stringify(user));
+
+    // Opcional: salvar também o tempo de expiração se quiser
+    await AsyncStorage.setItem('@SIOB:token_expires', tokens.expiresIn.toString());
+
+    navigation.replace('Relatorios');
+
+  } catch (error: any) {
+    console.log('Erro no login:', error.message);
+    alert(error.response?.data?.message || 'Erro ao fazer login');
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: darkTheme.colors.background }]}>
       <KeyboardAvoidingView
