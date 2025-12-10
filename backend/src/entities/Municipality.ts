@@ -24,7 +24,4 @@ export class Municipality {
   @CreateDateColumn()
   createdAt!: Date;
 
-  constructor() {
-    this.occurrences = [];
-  }
 }

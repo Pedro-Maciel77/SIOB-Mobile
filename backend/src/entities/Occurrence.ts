@@ -81,9 +81,4 @@ export class Occurrence {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  // Construtor para inicializar arrays
-  constructor() {
-    this.reports = [];
-    this.images = [];
-  }
 }

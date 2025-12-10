@@ -9,6 +9,7 @@ import { Occurrence } from './Occurrence';
 
 @Entity('vehicles')
 export class Vehicle {
+
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
@@ -26,8 +27,4 @@ export class Vehicle {
 
   @CreateDateColumn()
   createdAt!: Date;
-
-  constructor() {
-    this.occurrences = [];
-  }
 }

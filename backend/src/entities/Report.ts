@@ -30,7 +30,4 @@ export class Report {
   @CreateDateColumn()
   createdAt!: Date;
 
-  constructor() {
-    this.images = [];
-  }
 }

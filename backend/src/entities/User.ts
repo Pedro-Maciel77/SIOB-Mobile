@@ -55,12 +55,6 @@ export class User {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  constructor() {
-    this.occurrences = [];
-    this.reports = [];
-    this.auditLogs = [];
-  }
-
   @BeforeInsert()
   @BeforeUpdate()
   async hashPassword() {
