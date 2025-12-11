@@ -764,23 +764,39 @@ export default function EnviarRelatorio({ navigation, route }: any) {
                     color: viaturaId ? darkTheme.colors.primary : darkTheme.colors.onSurfaceVariant 
                   }}>
                     {viaturaId 
-                      ? viaturas.find(v => v.id === viaturaId)?.plate || 'Selecionada'
+                      ? (Array.isArray(viaturas) ? viaturas.find(v => v.id === viaturaId)?.plate : 'Selecionada') || 'Selecionada'
                       : 'Selecionar viatura'}
                   </Text>
                   <IconButton icon="chevron-down" size={20} />
                 </TouchableOpacity>
               }
             >
-              {viaturas.map((viatura) => (
+              {/* SOLUÇÃO DEFINITIVA */}
+              {Array.isArray(viaturas) ? (
+                viaturas.length > 0 ? (
+                  viaturas.map((viatura) => (
+                    <Menu.Item
+                      key={viatura.id}
+                      title={`${viatura.plate || 'Sem placa'} - ${viatura.name || 'Sem nome'}`}
+                      onPress={() => {
+                        setViaturaId(viatura.id);
+                        setMenuViaturaVisible(false);
+                      }}
+                    />
+                  ))
+                ) : (
+                  <Menu.Item
+                    title="Nenhuma viatura disponível"
+                    disabled
+                  />
+                )
+              ) : (
                 <Menu.Item
-                  key={viatura.id}
-                  title={`${viatura.plate} - ${viatura.name}`}
-                  onPress={() => {
-                    setViaturaId(viatura.id);
-                    setMenuViaturaVisible(false);
-                  }}
+                  title="Carregando viaturas..."
+                  disabled
                 />
-              ))}
+              )}
+              
               <Menu.Item
                 title="Nenhuma viatura"
                 onPress={() => {
