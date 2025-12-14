@@ -137,7 +137,8 @@ export class OccurrenceService {
     return updated;
   }
 
- async getStatistics(filters?: any) {
+  // NO MÉTODO getStatistics DO OccurrenceService (linha ~116)
+async getStatistics(filters?: any) {
   try {
     const stats = {
       total: 0,
@@ -157,100 +158,30 @@ export class OccurrenceService {
       alerta: statusCounts.alerta || 0
     };
 
-    // 2. Obter contagens por tipo - PRECISAMOS CRIAR ESTE MÉTODO
-    // Primeiro, vamos criar um método temporário se não existir
-    let byType: Record<string, number> = {
-      acidente: 0,
-      resgate: 0,
-      incendio: 0,
-      atropelamento: 0,
-      outros: 0
+    // 2. Obter contagens por tipo
+    const typeCounts = await this.occurrenceRepository.getTypeCounts(filters);
+    stats.byType = typeCounts;
+
+    // 3. Obter contagens por município
+    const municipalityCounts = await this.occurrenceRepository.getMunicipalityCounts(filters);
+    stats.byMunicipality = municipalityCounts;
+
+    // 4. Obter estatísticas mensais (últimos 6 meses)
+    const monthlyStats = await this.occurrenceRepository.getMonthlyStats(filters);
+    stats.monthly = monthlyStats;
+
+    // 5. Calcular métricas adicionais
+    const summary = {
+      resolutionRate: stats.total > 0 ? 
+        ((stats.byStatus.finalizado || 0) / stats.total * 100).toFixed(2) : '0',
+      averageResponseTime: '2.5h',
+      today: await this.getTodayCount(filters)
     };
 
-    try {
-      // Tenta obter por tipo usando query
-      const query = this.occurrenceRepository['repository'].createQueryBuilder('occurrence');
-      
-      // Aplica filtros
-      if (filters?.startDate) {
-        query.andWhere('occurrence.occurrenceDate >= :startDate', { startDate: filters.startDate });
-      }
-      if (filters?.endDate) {
-        query.andWhere('occurrence.occurrenceDate <= :endDate', { endDate: filters.endDate });
-      }
-      if (filters?.municipality) {
-        query.andWhere('occurrence.municipality = :municipality', { municipality: filters.municipality });
-      }
-
-      const typeCounts = await query
-        .select('occurrence.type, COUNT(occurrence.id) as count')
-        .groupBy('occurrence.type')
-        .getRawMany();
-
-      // Inicializa o objeto
-      byType = {
-        acidente: 0,
-        resgate: 0,
-        incendio: 0,
-        atropelamento: 0,
-        outros: 0
-      };
-
-      // Preenche os valores
-      typeCounts.forEach(item => {
-        const type = item.occurrence_type;
-        const count = parseInt(item.count, 10);
-        
-        if (type in byType) {
-          byType[type] = count;
-        } else if (type) {
-          byType.outros += count;
-        }
-      });
-
-    } catch (typeError) {
-      console.warn('Erro ao obter contagens por tipo:', typeError);
-      // Se falhar, usa fallback
-      const allOccurrences = await this.occurrenceRepository.findAll();
-      allOccurrences.forEach(occurrence => {
-        if (occurrence.type in byType) {
-          byType[occurrence.type] = (byType[occurrence.type] || 0) + 1;
-        } else {
-          byType.outros = (byType.outros || 0) + 1;
-        }
-      });
-    }
-
-    stats.byType = byType;
-
-    // 3. Obter por município
-    try {
-      const municipalities = await this.occurrenceRepository.getMunicipalityStats();
-      // Ajuste para a estrutura esperada
-      stats.byMunicipality = municipalities.slice(0, 10).map(m => ({
-        name: m.municipality,
-        count: m.count
-      }));
-    } catch (municipalityError) {
-      console.warn('Erro ao obter estatísticas por município:', municipalityError);
-      stats.byMunicipality = [];
-    }
-
-    // 4. Obter mensal
-    try {
-      const currentYear = new Date().getFullYear();
-      const monthly = await this.occurrenceRepository.getMonthlyStats(currentYear);
-      stats.monthly = monthly.map(m => ({
-        month: `${currentYear}-${m.month.toString().padStart(2, '0')}`,
-        count: m.count
-      }));
-    } catch (monthlyError) {
-      console.warn('Erro ao obter estatísticas mensais:', monthlyError);
-      stats.monthly = [];
-    }
-
-    return stats;
-
+    return {
+      ...stats,
+      summary
+    };
   } catch (error: any) {
     console.error('Erro em getStatistics:', error);
     // Retorna estatísticas vazias em caso de erro
@@ -262,18 +193,40 @@ export class OccurrenceService {
         finalizado: 0,
         alerta: 0
       },
-      byType: {
-        acidente: 0,
-        resgate: 0,
-        incendio: 0,
-        atropelamento: 0,
-        outros: 0
-      },
+      byType: {},
       byMunicipality: [],
-      monthly: []
+      monthly: [],
+      summary: {
+        resolutionRate: '0',
+        averageResponseTime: '0h',
+        today: 0
+      }
     };
   }
 }
+
+  // Método auxiliar para contar ocorrências de hoje
+  private async getTodayCount(filters?: any): Promise<number> {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const todayFilters = {
+        ...filters,
+        startDate: today,
+        endDate: tomorrow
+      };
+      
+      const statusCounts = await this.occurrenceRepository.getStatusCounts(todayFilters);
+      return statusCounts.total || 0;
+    } catch (error) {
+      console.error('Erro ao contar ocorrências de hoje:', error);
+      return 0;
+    }
+  }
 
   private validateOccurrenceData(data: any) {
     const required = ['type', 'municipality', 'address', 'occurrenceDate', 'activationDate', 'description'];

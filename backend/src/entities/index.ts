@@ -4,7 +4,7 @@ export { Occurrence } from './Occurrence';
 export { Report } from './Report';
 export { Vehicle } from './Vehicle';
 export { Municipality } from './Municipality';
-export { State } from './State'; // ← ADICIONE ESTA LINHA (CRÍTICO)
+export { State } from './State';
 export { AuditLog } from './AuditLog';
 export { OccurrenceImage } from './OccurrenceImage';
 export { ReportImage } from './ReportImage';

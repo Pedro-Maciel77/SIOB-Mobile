@@ -1,3 +1,4 @@
+// ./src/repositories/OccurrenceRepository.ts - VERSÃO CORRIGIDA
 import { FindManyOptions, FindOptionsWhere } from 'typeorm';
 import { AppDataSource } from '../config/database';
 import { Occurrence } from '../entities/Occurrence';
@@ -116,10 +117,9 @@ export class OccurrenceRepository extends BaseRepository<Occurrence> {
     finalizado: number;
     alerta: number;
   }> {
-    const query = this.repository.createQueryBuilder('occurrence')
-      .select('occurrence.status, COUNT(*) as count');
+    const query = this.repository.createQueryBuilder('occurrence');
 
-    // Aplicar mesmos filtros
+    // Aplicar filtros
     if (filters?.municipality) {
       query.andWhere('occurrence.municipality = :municipality', { 
         municipality: filters.municipality 
@@ -133,38 +133,138 @@ export class OccurrenceRepository extends BaseRepository<Occurrence> {
       });
     }
 
-    const result = await query
-      .groupBy('occurrence.status')
+    // PRIMEIRO: Contagem TOTAL
+    const totalCount = await query.getCount();
+
+    // SEGUNDO: Contagem por status com COALESCE para tratar NULLs
+    const statusCounts = await query
+      .select("COALESCE(occurrence.status, 'aberto') as status, COUNT(*) as count")
+      .groupBy("COALESCE(occurrence.status, 'aberto')")
       .getRawMany();
 
-    // Inicializa o objeto de contagens
-    const counts: {
-      total: number;
-      aberto: number;
-      em_andamento: number;
-      finalizado: number;
-      alerta: number;
-    } = {
-      total: 0,
+    // Inicializa com zeros
+    const counts = {
+      total: totalCount,
       aberto: 0,
       em_andamento: 0,
       finalizado: 0,
       alerta: 0
     };
 
-    // Preenche as contagens de forma type-safe
-    result.forEach(item => {
-      const status = item.occurrence_status as OccurrenceStatus;
+    // Preenche os status encontrados
+    statusCounts.forEach(item => {
+      const status = item.status as OccurrenceStatus;
       const count = parseInt(item.count);
       
-      // Verifica se a chave existe no objeto
       if (status in counts) {
         counts[status] = count;
-        counts.total += count;
       }
     });
 
     return counts;
+  }
+
+  async getTypeCounts(filters?: Partial<OccurrenceFilters>): Promise<Record<string, number>> {
+    const query = this.repository.createQueryBuilder('occurrence')
+      .select("COALESCE(occurrence.type, 'outros') as type, COUNT(*) as count");
+
+    // Aplicar filtros
+    if (filters?.municipality) {
+      query.andWhere('occurrence.municipality = :municipality', { 
+        municipality: filters.municipality 
+      });
+    }
+
+    if (filters?.status) {
+      query.andWhere('occurrence.status = :status', { status: filters.status });
+    }
+
+    if (filters?.startDate && filters?.endDate) {
+      query.andWhere('occurrence.occurrenceDate BETWEEN :startDate AND :endDate', {
+        startDate: filters.startDate,
+        endDate: filters.endDate
+      });
+    }
+
+    // Obter contagens por tipo
+    const typeCounts = await query
+      .groupBy("COALESCE(occurrence.type, 'outros')")
+      .getRawMany();
+
+    // Converter para objeto
+    const result: Record<string, number> = {};
+    typeCounts.forEach(item => {
+      result[item.type] = parseInt(item.count);
+    });
+
+    return result;
+  }
+
+  async getMunicipalityCounts(filters?: Partial<OccurrenceFilters>): Promise<Array<{ name: string; count: number }>> {
+    const query = this.repository.createQueryBuilder('occurrence')
+      .select('occurrence.municipality as name, COUNT(*) as count');
+
+    // Aplicar filtros
+    if (filters?.type) {
+      query.andWhere('occurrence.type = :type', { type: filters.type });
+    }
+
+    if (filters?.status) {
+      query.andWhere('occurrence.status = :status', { status: filters.status });
+    }
+
+    if (filters?.startDate && filters?.endDate) {
+      query.andWhere('occurrence.occurrenceDate BETWEEN :startDate AND :endDate', {
+        startDate: filters.startDate,
+        endDate: filters.endDate
+      });
+    }
+
+    const municipalityCounts = await query
+      .groupBy('occurrence.municipality')
+      .orderBy('count', 'DESC')
+      .getRawMany();
+
+    return municipalityCounts.map(item => ({
+      name: item.name,
+      count: parseInt(item.count)
+    }));
+  }
+
+  async getMonthlyStats(filters?: Partial<OccurrenceFilters>): Promise<Array<{ month: string; count: number }>> {
+    const query = this.repository.createQueryBuilder('occurrence')
+      .select("TO_CHAR(occurrence.occurrenceDate, 'YYYY-MM') as month, COUNT(*) as count");
+
+    // Aplicar filtros
+    if (filters?.municipality) {
+      query.andWhere('occurrence.municipality = :municipality', { 
+        municipality: filters.municipality 
+      });
+    }
+
+    if (filters?.type) {
+      query.andWhere('occurrence.type = :type', { type: filters.type });
+    }
+
+    if (filters?.status) {
+      query.andWhere('occurrence.status = :status', { status: filters.status });
+    }
+
+    const monthlyStats = await query
+      .groupBy("TO_CHAR(occurrence.occurrenceDate, 'YYYY-MM')")
+      .orderBy('month', 'DESC')
+      .limit(6) // Últimos 6 meses
+      .getRawMany();
+
+    // Formatar meses para exibição
+    return monthlyStats.map(item => {
+      const [year, month] = item.month.split('-');
+      const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      return {
+        month: `${monthNames[parseInt(month) - 1]}/${year.slice(2)}`,
+        count: parseInt(item.count)
+      };
+    });
   }
 
   async findByVehicle(vehicleId: string): Promise<Occurrence[]> {
@@ -197,7 +297,7 @@ export class OccurrenceRepository extends BaseRepository<Occurrence> {
     }));
   }
 
-  async getMonthlyStats(year: number): Promise<Array<{month: number, count: number}>> {
+  async getMonthlyStatsOld(year: number): Promise<Array<{month: number, count: number}>> {
     const result = await this.repository
       .createQueryBuilder('occurrence')
       .select('EXTRACT(MONTH FROM occurrence.occurrenceDate) as month, COUNT(*) as count')
